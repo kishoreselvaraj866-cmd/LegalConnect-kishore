@@ -8,8 +8,10 @@ yarn-error.log*
 # Dependency directories
 node_modules/
 
-# Environment variables
-# .env
+# Environment variables (never commit secrets)
+.env
+.env.*
+!.env.example
 
 # Optional npm cache directory
 .npm
