@@ -1,5 +1,5 @@
-// Import the community service and WebSocket service
-import { communityService } from "../services/api.js";
+// Import the community service, admin service, and WebSocket service
+import { communityService, adminService } from "../services/api.js";
 import { communityWebSocket } from "../services/websocket.js";
 
 function showToast(message) {
@@ -827,6 +827,14 @@ function renderComments(comments) {
     console.error("Invalid comments data:", comments);
     return '<div class="error-message">Unable to display comments. Invalid data format.</div>';
   }
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+  const isAdmin = user.role === "admin";
 
   return comments
     .map(
@@ -868,6 +876,7 @@ function renderComments(comments) {
           <button class="reply-btn"><i class="fas fa-reply"></i> Reply</button>
           <button class="share-btn"><i class="fas fa-share-alt"></i> Share</button>
           <button class="report-btn"><i class="fas fa-flag"></i> Report</button>
+          ${isAdmin ? `<button class="admin-delete-reply-btn btn btn-outline" title="Delete reply"><i class="fas fa-trash"></i> Delete</button>` : ""}
         </div>
         
         ${
@@ -909,6 +918,7 @@ function renderComments(comments) {
                     <button class="reply-btn"><i class="fas fa-reply"></i> Reply</button>
                     <button class="share-btn"><i class="fas fa-share-alt"></i> Share</button>
                     <button class="report-btn"><i class="fas fa-flag"></i> Report</button>
+                    ${isAdmin ? `<button class="admin-delete-reply-btn btn btn-outline" title="Delete reply"><i class="fas fa-trash"></i> Delete</button>` : ""}
                   </div>
                 </div>
               </div>
@@ -1086,6 +1096,25 @@ function setupCommentEventListeners(topicId) {
             : error.response?.data?.message ||
               "Failed to submit report. Please try again.";
         showToast(msg);
+      }
+    });
+  });
+
+  // Admin delete reply buttons
+  document.querySelectorAll(".comment .admin-delete-reply-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const comment = btn.closest(".comment");
+      const replyId = comment?.dataset?.id;
+      if (!replyId || !confirm("Are you sure you want to delete this reply?")) return;
+      try {
+        btn.disabled = true;
+        await adminService.deleteReply(topicId, replyId);
+        showToast("Reply deleted successfully.");
+        await loadComments(topicId);
+      } catch (error) {
+        const msg = error.response?.data?.message || "Failed to delete reply. Please try again.";
+        showToast(msg);
+        btn.disabled = false;
       }
     });
   });

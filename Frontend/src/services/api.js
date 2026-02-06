@@ -238,6 +238,8 @@ export const adminService = {
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getTopics: () => api.get("/admin/topics"),
   deleteTopic: (id) => api.delete(`/admin/topics/${id}`),
+  deleteReply: (topicId, replyId) =>
+    api.delete(`/admin/topics/${topicId}/replies/${replyId}`),
   getLawyers: () => api.get("/admin/lawyers"),
   deleteLawyer: (id) => api.delete(`/admin/lawyers/${id}`),
   getResources: () => api.get("/admin/resources"),

@@ -5,6 +5,24 @@ import ResourceModel from "../models/Resource.js";
 import ConsultationModel from "../models/Consultation.js";
 import { logger } from "../utils/logger.js";
 
+function toIdString(id) {
+  return id ? id.toString() : null;
+}
+
+function removeReplyFromReplies(replies, replyId) {
+  if (!Array.isArray(replies)) return false;
+  for (let i = 0; i < replies.length; i++) {
+    if (toIdString(replies[i]._id) === replyId) {
+      replies.splice(i, 1);
+      return true;
+    }
+    if (removeReplyFromReplies(replies[i].replies, replyId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * @desc    Get dashboard stats (admin only)
  * @route   GET /api/admin/dashboard
@@ -187,6 +205,43 @@ export const deleteTopic = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error deleting topic",
+    });
+  }
+};
+
+/**
+ * @desc    Delete a reply within a topic (admin only)
+ * @route   DELETE /api/admin/topics/:topicId/replies/:replyId
+ * @access  Private/Admin
+ */
+export const deleteReply = async (req, res) => {
+  try {
+    const { topicId, replyId } = req.params;
+    const topic = await TopicModel.findById(topicId);
+    if (!topic) {
+      return res.status(404).json({
+        success: false,
+        message: "Topic not found",
+      });
+    }
+    const removed = removeReplyFromReplies(topic.replies, replyId);
+    if (!removed) {
+      return res.status(404).json({
+        success: false,
+        message: "Reply not found",
+      });
+    }
+    topic.markModified("replies");
+    await topic.save();
+    res.json({
+      success: true,
+      message: "Reply deleted successfully",
+    });
+  } catch (error) {
+    logger.error("Admin delete reply error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error deleting reply",
     });
   }
 };

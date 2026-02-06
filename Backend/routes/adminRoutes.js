@@ -5,6 +5,7 @@ import {
   deleteUser,
   getTopics,
   deleteTopic,
+  deleteReply,
   getLawyers,
   deleteLawyer,
   getResources,
@@ -23,6 +24,7 @@ router.get("/dashboard", getDashboardStats);
 router.get("/users", getUsers);
 router.delete("/users/:id", deleteUser);
 router.get("/topics", getTopics);
+router.delete("/topics/:topicId/replies/:replyId", deleteReply);
 router.delete("/topics/:id", deleteTopic);
 router.get("/lawyers", getLawyers);
 router.delete("/lawyers/:id", deleteLawyer);
