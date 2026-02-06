@@ -84,8 +84,19 @@ function initApp() {
     applyTranslations();
   });
 
-  // Render the home page by default
-  renderHomePage();
+  // Set initial history state and restore from URL hash if present (so back button and bookmarks work)
+  const hash = window.location.hash.slice(1);
+  if (hash.startsWith("lawyer-profile/")) {
+    const id = hash.split("/")[1];
+    history.replaceState({ page: "lawyer-profile", params: { id } }, "", "#" + hash);
+    navigateTo("lawyer-profile", { id }, true);
+  } else if (["lawyers", "resources", "community", "ai-assistant", "lawyer-register", "user-profile"].includes(hash)) {
+    history.replaceState({ page: hash, params: {} }, "", "#" + hash);
+    navigateTo(hash, {}, true);
+  } else {
+    history.replaceState({ page: "home" }, "", "#home");
+    renderHomePage();
+  }
 }
 
 // Function to set up the language selector

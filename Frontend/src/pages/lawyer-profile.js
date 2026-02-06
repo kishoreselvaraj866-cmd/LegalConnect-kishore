@@ -1,5 +1,12 @@
 import { lawyerService } from "../services/api.js";
 
+function getProfileImageUrl(profileImage) {
+  if (!profileImage || profileImage === "default-profile.png") {
+    return "/lawyer.png";
+  }
+  return profileImage;
+}
+
 export async function renderLawyerProfilePage(lawyerId) {
   const mainContent = document.getElementById("main-content");
 
@@ -42,9 +49,7 @@ export async function renderLawyerProfilePage(lawyerId) {
       <section class="lawyer-profile-page">
         <div class="profile-header">
           <div class="profile-image">
-            <img src="${
-              lawyer.profileImage ? lawyer.profileImage : "/lawyer.png"
-            }" alt="${lawyer.name}">
+            <img src="${getProfileImageUrl(lawyer.profileImage)}" alt="${lawyer.name}" onerror="this.src='/lawyer.png'">
             ${
               isProfileOwner
                 ? `<button id="change-photo-btn" class="btn btn-sm btn-outline"><i class="fas fa-camera"></i> Change Photo</button>`
@@ -580,9 +585,7 @@ function showChangePhotoModal(lawyer, lawyerId) {
       <h2>Update Profile Photo</h2>
       <div class="profile-upload-container">
         <div class="profile-image-preview">
-          <img id="profile-preview" src="${
-            lawyer.profileImage || "/lawyer.png"
-          }" alt="Profile preview">
+          <img id="profile-preview" src="${getProfileImageUrl(lawyer.profileImage)}" alt="Profile preview" onerror="this.src='/lawyer.png'">
         </div>
         <div class="upload-controls">
           <input type="file" id="profile-image" name="profileImage" accept="image/*" style="display: none;">

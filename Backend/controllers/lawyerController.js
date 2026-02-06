@@ -344,12 +344,19 @@ export const getLawyerById = async (req, res) => {
       });
     }
 
+    // Use frontend-valid default image (User model may have "default-profile.png" which doesn't exist in frontend)
+    const profileImage =
+      lawyer.user.profileImage &&
+      lawyer.user.profileImage !== "default-profile.png"
+        ? lawyer.user.profileImage
+        : "/lawyer.png";
+
     // Format response data
     const lawyerData = {
       id: lawyer._id,
       name: lawyer.user.name,
       email: lawyer.user.email,
-      profileImage: lawyer.user.profileImage,
+      profileImage,
       practiceAreas: lawyer.practiceAreas,
       serviceTypes: lawyer.serviceTypes,
       education: lawyer.education,

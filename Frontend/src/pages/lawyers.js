@@ -348,47 +348,45 @@ async function loadLawyers(filters = {}) {
       `;
     }
 
-    // Build HTML for each lawyer
+    // Build HTML for each lawyer (safe array joins)
     const lawyersHTML = lawyers
-      .map(
-        (lawyer) => `
+      .map((lawyer) => {
+        const practiceAreas = Array.isArray(lawyer.practiceAreas) ? lawyer.practiceAreas.join(", ") : "—";
+        const serviceTypes = Array.isArray(lawyer.serviceTypes) ? lawyer.serviceTypes.join(", ") : "—";
+        const languages = Array.isArray(lawyer.languages) ? lawyer.languages.join(", ") : "—";
+        const location = lawyer.location || "Location not specified";
+        const rating = lawyer.rating ?? 0;
+        const reviewCount = lawyer.reviewCount ?? 0;
+        const distanceHtml =
+          userLocation && lawyer.officeCoordinates
+            ? `
+            <div class="lawyer-distance">
+              <i class="fas fa-map-marker-alt"></i>
+              ${lawyer.distance != null
+                ? lawyer.distance.toFixed(1)
+                : calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    lawyer.officeCoordinates.latitude,
+                    lawyer.officeCoordinates.longitude
+                  ).toFixed(1)} km away
+            </div>`
+            : "";
+        return `
       <div class="lawyer-card card" data-id="${lawyer.id}">
         <div class="lawyer-info">
-          <img src="${lawyer.profileImage || "/lawyer.png"}" alt="${
-          lawyer.name
-        }" class="lawyer-photo" onerror="this.src='/lawyer.png'">
+          <img src="${lawyer.profileImage || "/lawyer.png"}" alt="${lawyer.name}" class="lawyer-photo" onerror="this.src='/lawyer.png'">
           <div class="lawyer-details">
             <h3>${lawyer.name}</h3>
-            <p class="lawyer-specialties"><strong>Practice Areas:</strong> ${lawyer.practiceAreas.join(
-              ", "
-            )}</p>
-            <p><strong>Location:</strong> ${lawyer.location}</p>
-            <p><strong>Services:</strong> ${lawyer.serviceTypes.join(", ")}</p>
-            <p><strong>Languages:</strong> ${lawyer.languages.join(", ")}</p>
+            <p class="lawyer-specialties"><strong>Practice areas:</strong> ${practiceAreas}</p>
+            <p><strong>Location:</strong> ${location}</p>
+            <p><strong>Services:</strong> ${serviceTypes}</p>
+            <p><strong>Languages:</strong> ${languages}</p>
             <div class="lawyer-rating">
-              <span class="stars">
-                ${generateStars(lawyer.rating)}
-              </span>
-              <span>${lawyer.rating}/5 (${lawyer.reviewCount} reviews)</span>
+              <span class="stars">${generateStars(rating)}</span>
+              <span>${rating}/5 (${reviewCount} reviews)</span>
             </div>
-            ${
-              userLocation && lawyer.officeCoordinates
-                ? `
-            <div class="lawyer-distance">
-              <i class="fas fa-map-marker-alt"></i> 
-              ${
-                lawyer.distance
-                  ? lawyer.distance.toFixed(1)
-                  : calculateDistance(
-                      userLocation.latitude,
-                      userLocation.longitude,
-                      lawyer.officeCoordinates.latitude,
-                      lawyer.officeCoordinates.longitude
-                    ).toFixed(1)
-              } km away
-            </div>`
-                : ""
-            }
+            ${distanceHtml}
           </div>
         </div>
         <div class="lawyer-actions">
@@ -396,8 +394,8 @@ async function loadLawyers(filters = {}) {
           <button class="btn btn-primary schedule-btn">Schedule Consultation</button>
         </div>
       </div>
-    `
-      )
+    `;
+      })
       .join("");
 
     // If we have the location notice, append to it, otherwise set as innerHTML

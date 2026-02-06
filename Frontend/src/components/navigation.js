@@ -10,24 +10,36 @@ import { renderUserProfilePage } from "../pages/user-profile.js"; // Add this im
 // Add a variable to track current page
 let currentPage = "home";
 
-// Add a new function for programmatic navigation
-export function navigateTo(page, params) {
-  console.log(`Navigating programmatically to: ${page}`, params);
+function getHashForPage(page, params = {}) {
+  if (page === "lawyer-profile" && params.id) {
+    return `#lawyer-profile/${params.id}`;
+  }
+  if (page === "user-profile") return "#user-profile";
+  return `#${page}`;
+}
 
-  // Skip if already on this page
-  if (page === currentPage && page === "user-profile") {
-    console.log("Already on user profile page, skipping render");
+// Programmatic navigation. Set skipPushState=true when handling browser back/forward.
+export function navigateTo(page, params, skipPushState = false) {
+  const safeParams = params || {};
+
+  // Skip if already on this page (except lawyer-profile where id might differ)
+  if (page === currentPage && page !== "lawyer-profile" && page === "user-profile") {
     return;
   }
 
-  // Update current page
   currentPage = page;
+
+  // Update browser history so back button works
+  if (!skipPushState) {
+    const hash = getHashForPage(page, safeParams);
+    const state = { page, params: safeParams };
+    history.pushState(state, "", hash);
+  }
 
   // Clear active class from all links
   const navLinks = document.querySelectorAll("#main-nav a");
   navLinks.forEach((l) => l.classList.remove("active"));
 
-  // Find the corresponding link and mark it as active if it exists
   const link = Array.from(navLinks).find(
     (l) => l.getAttribute("data-page") === page
   );
@@ -35,7 +47,6 @@ export function navigateTo(page, params) {
     link.classList.add("active");
   }
 
-  // Render the appropriate page
   switch (page) {
     case "home":
       renderHomePage();
@@ -56,7 +67,7 @@ export function navigateTo(page, params) {
       renderLawyerRegisterPage();
       break;
     case "lawyer-profile":
-      renderLawyerProfilePage(params.id);
+      renderLawyerProfilePage(safeParams.id);
       break;
     case "user-profile":
       renderUserProfilePage();
@@ -81,27 +92,24 @@ function renderUserMenu(user) {
 }
 
 export function setupNavigation() {
+  // Handle browser back/forward
+  window.addEventListener("popstate", (e) => {
+    if (e.state && e.state.page) {
+      navigateTo(e.state.page, e.state.params || {}, true);
+    }
+  });
+
   const navLinks = document.querySelectorAll("#main-nav a");
 
   navLinks.forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
 
-      // Remove active class from all links
-      navLinks.forEach((l) => l.classList.remove("active"));
-
-      // Add active class to clicked link
-      link.classList.add("active");
-
-      // Get the page to render
       const page = link.getAttribute("data-page");
-
-      // Use the same navigation logic
       navigateTo(page);
     });
   });
 
-  // Add event listener for user profile icon click
   document.addEventListener("click", function (e) {
     const profileIcon = e.target.closest("#profile-icon");
 

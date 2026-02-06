@@ -1,7 +1,19 @@
 import TopicModel from "../models/Topic.js";
 import { logger } from "../utils/logger.js";
 
-// Create an in-memory store for topics during development
+// Helper to create a reply object for mock data
+function makeReply(id, content, userName, profileImage, createdAt) {
+  return {
+    id,
+    content,
+    user: { name: userName, profileImage: profileImage || "/lawyer.png" },
+    voteScore: 0,
+    createdAt: createdAt || new Date().toISOString(),
+    replies: [],
+  };
+}
+
+// In-memory store: replies must be arrays for topic detail; list API returns reply count
 const mockTopics = [
   {
     id: "1",
@@ -9,10 +21,13 @@ const mockTopics = [
     category: "Housing & Tenant Issues",
     user: {
       name: "John Smith",
-      profileImage: "/avatar1.jpg",
+      profileImage: "/lawyer.png",
     },
     anonymous: false,
-    replies: 15,
+    replies: [
+      makeReply("r1-1", "You may have a right to withhold rent or repair and deduct in many jurisdictions. Check your local tenant rights.", "Legal Helper", "/lawyer.png", "2023-10-26T10:00:00Z"),
+      makeReply("r1-2", "Document every communication with your landlord and the dates the heating was out. This will help if you need to go to court.", "Tenant Advocate", "/lawyer.png", "2023-10-26T14:20:00Z"),
+    ],
     views: 234,
     voteScore: 12,
     createdAt: "2023-10-25T14:32:00Z",
@@ -25,10 +40,10 @@ const mockTopics = [
     category: "Family Law",
     user: {
       name: "Parent In Need",
-      profileImage: "/avatar2.jpg",
+      profileImage: "/lawyer.png",
     },
     anonymous: false,
-    replies: 7,
+    replies: [],
     views: 128,
     voteScore: 8,
     createdAt: "2023-10-24T09:15:00Z",
@@ -41,10 +56,10 @@ const mockTopics = [
     category: "Employment Law",
     user: {
       name: "Worker Rights",
-      profileImage: "/avatar3.jpg",
+      profileImage: "/lawyer.png",
     },
     anonymous: false,
-    replies: 21,
+    replies: [],
     views: 302,
     voteScore: 15,
     createdAt: "2023-10-20T16:45:00Z",
@@ -57,10 +72,10 @@ const mockTopics = [
     category: "Small Claims",
     user: {
       name: "Victorious Renter",
-      profileImage: "/avatar4.jpg",
+      profileImage: "/lawyer.png",
     },
     anonymous: false,
-    replies: 18,
+    replies: [],
     views: 253,
     voteScore: 6,
     createdAt: "2023-10-22T11:20:00Z",
@@ -102,11 +117,15 @@ const safeEmitSocketEvent = (event, data, room = null) => {
  */
 export const getTopics = async (req, res) => {
   try {
-    // Return the in-memory mock topics
+    // For list view, send reply count (number); topic detail API sends full replies array
+    const listData = mockTopics.map((t) => ({
+      ...t,
+      replies: Array.isArray(t.replies) ? t.replies.length : t.replies || 0,
+    }));
     res.json({
       success: true,
-      count: mockTopics.length,
-      data: mockTopics,
+      count: listData.length,
+      data: listData,
     });
   } catch (error) {
     logger.error("Get topics error:", error);
@@ -215,13 +234,12 @@ export const createTopic = async (req, res) => {
       anonymous,
       user: {
         name: req.user ? req.user.name : "Anonymous User",
-        profileImage: req.user?.profileImage || "/avatar-default.jpg",
+        profileImage: req.user?.profileImage || "/lawyer.png",
       },
-      replies: 0,
+      replies: [],
       views: 0,
       voteScore: 0,
       createdAt: new Date().toISOString(),
-      replies: [],
     };
 
     // Add to our mock data store
@@ -275,8 +293,8 @@ export const addReply = async (req, res) => {
           ? req.user.name
           : "Anonymous User",
         profileImage: anonymous
-          ? "/avatar-default.jpg"
-          : req.user?.profileImage || "/avatar-default.jpg",
+          ? "/lawyer.png"
+          : req.user?.profileImage || "/lawyer.png",
       },
       anonymous,
       voteScore: 0,
@@ -320,9 +338,6 @@ export const addReply = async (req, res) => {
       if (!topic.replies) topic.replies = [];
       topic.replies.push(newReply);
     }
-
-    // Increment reply count
-    topic.replies = topic.replies ? topic.replies.length : 1;
 
     // Emit WebSocket event for new reply (safely)
     safeEmitSocketEvent(

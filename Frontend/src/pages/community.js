@@ -2,6 +2,21 @@
 import { communityService } from "../services/api.js";
 import { communityWebSocket } from "../services/websocket.js";
 
+function showToast(message) {
+  const existing = document.getElementById("community-toast");
+  if (existing) existing.remove();
+  const toast = document.createElement("div");
+  toast.id = "community-toast";
+  toast.className = "community-toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add("show"), 10);
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
 export function renderCommunityPage() {
   const mainContent = document.getElementById("main-content");
 
@@ -269,7 +284,7 @@ function renderTopics(topics) {
         
         <div class="topic-meta">
           <div class="topic-stats">
-            <span><i class="fas fa-comment"></i> ${topic.replies} replies</span>
+            <span><i class="fas fa-comment"></i> ${typeof topic.replies === "number" ? topic.replies : (topic.replies?.length ?? 0)} replies</span>
             <span><i class="fas fa-eye"></i> ${topic.views} views</span>
             <span><i class="fas fa-clock"></i> ${formatTimeAgo(
               topic.createdAt
@@ -277,9 +292,9 @@ function renderTopics(topics) {
           </div>
           
           <div class="topic-author">
-            <img src="${topic.user.profileImage || "/user.png"}" alt="${
+            <img src="${topic.user.profileImage || "/lawyer.png"}" alt="${
         topic.user.name || "Anonymous User"
-      }" class="author-image" onerror="this.src='/user.png'">
+      }" class="author-image" onerror="this.src='/lawyer.png'">
             <span>${topic.user.name || "Anonymous User"}</span>
           </div>
         </div>
@@ -541,19 +556,14 @@ async function loadTopicDetail(topicId) {
           
           <div class="topic-detail-meta">
             <div class="topic-author">
-              <img src="${topic.user.profileImage || "/user.png"}" alt="${
+              <img src="${topic.user.profileImage || "/lawyer.png"}" alt="${
       topic.user.name || "Anonymous User"
-    }" class="author-image" onerror="this.src='/user.png'">
+    }" class="author-image" onerror="this.src='/lawyer.png'">
               <div>
                 <span class="author-name">${
                   topic.anonymous ? "Anonymous" : topic.user.name
                 }</span>
-                <span class="author-joined">Member since ${new Date(
-                  topic.user.createdAt
-                ).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                })}</span>
+                <span class="author-joined">${topic.user?.createdAt ? "Member since " + new Date(topic.user.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long" }) : ""}</span>
               </div>
             </div>
             
@@ -568,7 +578,7 @@ async function loadTopicDetail(topicId) {
           
           <div class="topic-stats">
             <span><i class="fas fa-comment"></i> ${
-              topic.replies ? topic.replies.length : 0
+              Array.isArray(topic.replies) ? topic.replies.length : 0
             } replies</span>
             <span><i class="fas fa-eye"></i> ${topic.views} views</span>
           </div>
@@ -592,6 +602,48 @@ async function loadTopicDetail(topicId) {
       .addEventListener("click", () => {
         voteTopic(topicId, "down");
       });
+
+    // Share: copy topic URL or use Web Share API
+    topicDetail.querySelector(".share-btn").addEventListener("click", () => {
+      const shareUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || "#community"}`;
+      if (navigator.share) {
+        navigator.share({ title: topic.title, url: shareUrl, text: topic.title }).catch(() => copyShareUrl(shareUrl));
+      } else {
+        copyShareUrl(shareUrl);
+      }
+    });
+
+    function copyShareUrl(url) {
+      navigator.clipboard.writeText(url).then(() => showToast("Link copied to clipboard")).catch(() => showToast("Copy the link from your browser address bar"));
+    }
+
+    // Save / Bookmark: toggle in localStorage
+    const bookmarkBtn = topicDetail.querySelector(".bookmark-btn");
+    const savedTopics = JSON.parse(localStorage.getItem("legalconnect_saved_topics") || "[]");
+    if (savedTopics.includes(topicId)) {
+      bookmarkBtn.innerHTML = '<i class="fas fa-bookmark"></i> Saved';
+      bookmarkBtn.classList.add("saved");
+    }
+    bookmarkBtn.addEventListener("click", () => {
+      let list = JSON.parse(localStorage.getItem("legalconnect_saved_topics") || "[]");
+      if (list.includes(topicId)) {
+        list = list.filter((id) => id !== topicId);
+        bookmarkBtn.innerHTML = '<i class="far fa-bookmark"></i> Save';
+        bookmarkBtn.classList.remove("saved");
+        showToast("Removed from saved");
+      } else {
+        list.push(topicId);
+        bookmarkBtn.innerHTML = '<i class="fas fa-bookmark"></i> Saved';
+        bookmarkBtn.classList.add("saved");
+        showToast("Saved to bookmarks");
+      }
+      localStorage.setItem("legalconnect_saved_topics", JSON.stringify(list));
+    });
+
+    // Report: acknowledge (no backend yet)
+    topicDetail.querySelector(".report-btn").addEventListener("click", () => {
+      showToast("Report submitted. We will review this content.");
+    });
   } catch (error) {
     console.error("Error loading topic details:", error);
     topicDetail.innerHTML =
@@ -616,12 +668,8 @@ async function loadComments(topicId) {
 
     const topic = data.data;
 
-    // Ensure topic has a replies property, even if it's empty
-    if (!topic.replies) {
-      topic.replies = [];
-    }
-
-    const comments = topic.replies;
+    // API may send replies as array (topic detail) or number (list); normalize to array for comments
+    const comments = Array.isArray(topic.replies) ? topic.replies : [];
 
     if (comments.length === 0) {
       commentsList.innerHTML =
@@ -661,9 +709,9 @@ function renderComments(comments) {
       <div class="comment-content">
         <div class="comment-header">
           <div class="comment-author">
-            <img src="${comment.user?.profileImage || "/user.png"}" alt="${
+            <img src="${comment.user?.profileImage || "/lawyer.png"}" alt="${
         comment.user?.name || "Anonymous User"
-      }" class="author-image" onerror="this.src='/user.png'">
+      }" class="author-image" onerror="this.src='/lawyer.png'">
             <div>
               <span class="author-name">${
                 comment.user?.name || "Anonymous User"
@@ -708,10 +756,10 @@ function renderComments(comments) {
                   <div class="comment-header">
                     <div class="comment-author">
                       <img src="${
-                        reply.user?.profileImage || "/user.png"
+                        reply.user?.profileImage || "/lawyer.png"
                       }" alt="${
                   reply.user?.name || "Anonymous User"
-                }" class="author-image" onerror="this.src='/user.png'">
+                }" class="author-image" onerror="this.src='/lawyer.png'">
                       <span class="author-name">${
                         reply.user?.name || "Anonymous User"
                       }</span>
@@ -861,6 +909,17 @@ function setupCommentEventListeners(topicId) {
         console.error("Error voting on comment:", error);
       }
     });
+  });
+
+  // Share and Report on comments
+  document.querySelectorAll(".comment .share-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = window.location.href;
+      navigator.clipboard.writeText(url).then(() => showToast("Link copied to clipboard")).catch(() => showToast("Copy the link from your browser"));
+    });
+  });
+  document.querySelectorAll(".comment .report-btn").forEach((btn) => {
+    btn.addEventListener("click", () => showToast("Report submitted. We will review this content."));
   });
 }
 
@@ -1234,7 +1293,7 @@ function createTopicElement(topic) {
       
       <div class="topic-meta">
         <div class="topic-stats">
-          <span><i class="fas fa-comment"></i> ${topic.replies} replies</span>
+          <span><i class="fas fa-comment"></i> ${typeof topic.replies === "number" ? topic.replies : (topic.replies?.length ?? 0)} replies</span>
           <span><i class="fas fa-eye"></i> ${topic.views} views</span>
           <span><i class="fas fa-clock"></i> ${formatTimeAgo(
             topic.createdAt
@@ -1242,9 +1301,9 @@ function createTopicElement(topic) {
         </div>
         
         <div class="topic-author">
-          <img src="${topic.user.profileImage || "/user.png"}" alt="${
+          <img src="${topic.user.profileImage || "/lawyer.png"}" alt="${
     topic.user.name || "Anonymous User"
-  }" class="author-image" onerror="this.src='/user.png'">
+  }" class="author-image" onerror="this.src='/lawyer.png'">
           <span>${topic.user.name || "Anonymous User"}</span>
         </div>
       </div>
