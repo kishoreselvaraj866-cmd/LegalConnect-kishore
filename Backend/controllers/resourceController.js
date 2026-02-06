@@ -5,6 +5,26 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Shared mock data with views/downloads (in-memory for now; replace with DB later)
+function getMockResources() {
+  return [
+    { id: "1", title: "Know Your Rights: Tenant Basics", description: "Essential information for renters about lease agreements, maintenance responsibilities, eviction procedures, and security deposits.", type: "Guide", category: "Housing & Tenant Rights", file: "Tenants-Rights.pdf", views: 0, downloads: 0 },
+    { id: "2", title: "Power of Attorney Form", description: "Customize this power of attorney template to authorize someone to make legal decisions on your behalf.", type: "Template", category: "Family Law", file: null, views: 0, downloads: 0 },
+    { id: "3", title: "Discrimination Law Overview", description: "Comprehensive guide to discrimination laws and protections for individuals in various settings.", type: "Guide", category: "Civil Rights", file: "DISCRIMINATION.pdf", views: 0, downloads: 0 },
+    { id: "4", title: "English Constitution", description: "Overview of the English constitutional framework and principles.", type: "Guide", category: "Other", file: "englishconstitution.pdf", views: 0, downloads: 0 },
+    { id: "5", title: "Labour Law Handbook", description: "Guide to employment laws, worker rights, and employer obligations.", type: "Guide", category: "Employment Law", file: "Labour_Law.pdf", views: 0, downloads: 0 },
+    { id: "6", title: "Model Tenancy Act", description: "Complete text of the Model Tenancy Act with explanations and implications for landlords and tenants.", type: "Guide", category: "Housing & Tenant Rights", file: "Model-Tenancy-Act-English.pdf", views: 0, downloads: 0 },
+    { id: "7", title: "Notice of Termination Template", description: "Template for creating a legally valid termination notice for tenancy agreements.", type: "Template", category: "Housing & Tenant Rights", file: "Notice-of-Termination.pdf", views: 0, downloads: 0 },
+    { id: "8", title: "Privacy Law Guide", description: "Understanding privacy laws and your rights to data protection and confidentiality.", type: "Guide", category: "Consumer Rights", file: "PRIVACY_LAW.pdf", views: 0, downloads: 0 },
+    { id: "9", title: "Eviction Rights and Processes", description: "Legal guide to eviction procedures and tenant rights during eviction.", type: "Guide", category: "Housing & Tenant Rights", file: "RIGHT_EVICTION.pdf", views: 0, downloads: 0 },
+    { id: "10", title: "Tenants' Rights Handbook", description: "Comprehensive handbook on tenant rights, responsibilities, and legal remedies.", type: "Guide", category: "Housing & Tenant Rights", file: "Tenants-Rights-Handbook.pdf", views: 0, downloads: 0 },
+    { id: "11", title: "Women's Legal Rights", description: "Guide to legal protections and rights specific to women across various areas of law.", type: "Guide", category: "Civil Rights", file: "Woman_Law.pdf", views: 0, downloads: 0 },
+  ];
+}
+
+// In-memory store so view/download counts persist during server run (replace with DB when ready)
+const resourceStore = getMockResources();
+
 /**
  * @desc    Get all resources (with filters)
  * @route   GET /api/resources
@@ -12,112 +32,29 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 export const getResources = async (req, res) => {
   try {
-    // Mock data including the PDF files
-    const resources = [
-      {
-        id: "1",
-        title: "Know Your Rights: Tenant Basics",
-        description:
-          "Essential information for renters about lease agreements, maintenance responsibilities, eviction procedures, and security deposits.",
-        type: "Guide",
-        category: "Housing & Tenant Rights",
-        file: "Tenants-Rights.pdf",
-      },
-      {
-        id: "2",
-        title: "Power of Attorney Form",
-        description:
-          "Customize this power of attorney template to authorize someone to make legal decisions on your behalf.",
-        type: "Template",
-        category: "Family Law",
-      },
-      {
-        id: "3",
-        title: "Discrimination Law Overview",
-        description:
-          "Comprehensive guide to discrimination laws and protections for individuals in various settings.",
-        type: "Guide",
-        category: "Civil Rights",
-        file: "DISCRIMINATION.pdf",
-      },
-      {
-        id: "4",
-        title: "English Constitution",
-        description:
-          "Overview of the English constitutional framework and principles.",
-        type: "Guide",
-        category: "Other",
-        file: "englishconstitution.pdf",
-      },
-      {
-        id: "5",
-        title: "Labour Law Handbook",
-        description:
-          "Guide to employment laws, worker rights, and employer obligations.",
-        type: "Guide",
-        category: "Employment Law",
-        file: "Labour_Law.pdf",
-      },
-      {
-        id: "6",
-        title: "Model Tenancy Act",
-        description:
-          "Complete text of the Model Tenancy Act with explanations and implications for landlords and tenants.",
-        type: "Guide",
-        category: "Housing & Tenant Rights",
-        file: "Model-Tenancy-Act-English.pdf",
-      },
-      {
-        id: "7",
-        title: "Notice of Termination Template",
-        description:
-          "Template for creating a legally valid termination notice for tenancy agreements.",
-        type: "Template",
-        category: "Housing & Tenant Rights",
-        file: "Notice-of-Termination.pdf",
-      },
-      {
-        id: "8",
-        title: "Privacy Law Guide",
-        description:
-          "Understanding privacy laws and your rights to data protection and confidentiality.",
-        type: "Guide",
-        category: "Consumer Rights",
-        file: "PRIVACY_LAW.pdf",
-      },
-      {
-        id: "9",
-        title: "Eviction Rights and Processes",
-        description:
-          "Legal guide to eviction procedures and tenant rights during eviction.",
-        type: "Guide",
-        category: "Housing & Tenant Rights",
-        file: "RIGHT_EVICTION.pdf",
-      },
-      {
-        id: "10",
-        title: "Tenants' Rights Handbook",
-        description:
-          "Comprehensive handbook on tenant rights, responsibilities, and legal remedies.",
-        type: "Guide",
-        category: "Housing & Tenant Rights",
-        file: "Tenants-Rights-Handbook.pdf",
-      },
-      {
-        id: "11",
-        title: "Women's Legal Rights",
-        description:
-          "Guide to legal protections and rights specific to women across various areas of law.",
-        type: "Guide",
-        category: "Civil Rights",
-        file: "Woman_Law.pdf",
-      },
-    ];
+    const { category, type, search } = req.query;
+    let list = [...resourceStore];
+
+    if (category && category !== "all") {
+      list = list.filter((r) => r.category === category);
+    }
+    if (type && type !== "all") {
+      list = list.filter((r) => r.type === type);
+    }
+    if (search && search.trim()) {
+      const term = search.trim().toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.title.toLowerCase().includes(term) ||
+          r.description.toLowerCase().includes(term) ||
+          (r.category && r.category.toLowerCase().includes(term))
+      );
+    }
 
     res.json({
       success: true,
-      count: resources.length,
-      data: resources,
+      count: list.length,
+      data: list,
     });
   } catch (error) {
     console.error("Get resources error:", error);
@@ -141,10 +78,11 @@ export const getResourceCategories = async (req, res) => {
       "Family Law",
       "Employment Law",
       "Consumer Rights",
+      "Civil Rights",
+      "Other",
       "Immigration",
       "Traffic & Driving",
       "Criminal Defense",
-      "Civil Rights",
     ];
 
     res.json({
@@ -197,10 +135,8 @@ export const incrementDownload = async (req, res) => {
     // 2. Increment the download count
     // 3. Save the updated resource
 
-    // For our mock data, simulate updating the download count
-    // Get the resource from our mock data
-    const resources = getMockResources();
-    const resourceIndex = resources.findIndex((r) => r.id === resourceId);
+    // Update in-memory store (use resourceStore so counts persist)
+    const resourceIndex = resourceStore.findIndex((r) => r.id === resourceId);
 
     if (resourceIndex === -1) {
       return res.status(404).json({
@@ -209,15 +145,12 @@ export const incrementDownload = async (req, res) => {
       });
     }
 
-    // Increment the download count
-    resources[resourceIndex].downloads += 1;
-
-    // In a real app, we would save this to the database
-    // Here we just return the updated count
+    resourceStore[resourceIndex].downloads =
+      (resourceStore[resourceIndex].downloads || 0) + 1;
 
     res.json({
       success: true,
-      downloads: resources[resourceIndex].downloads,
+      downloads: resourceStore[resourceIndex].downloads,
       message: `Download count incremented for resource ID: ${resourceId}`,
     });
   } catch (error) {
@@ -329,10 +262,8 @@ export const incrementView = async (req, res) => {
     // 2. Increment the view count
     // 3. Save the updated resource
 
-    // For our mock data, simulate updating the view count
-    // Get the resource from our mock data
-    const resources = getMockResources();
-    const resourceIndex = resources.findIndex((r) => r.id === resourceId);
+    // Update in-memory store (use resourceStore so counts persist)
+    const resourceIndex = resourceStore.findIndex((r) => r.id === resourceId);
 
     if (resourceIndex === -1) {
       return res.status(404).json({
@@ -341,15 +272,12 @@ export const incrementView = async (req, res) => {
       });
     }
 
-    // Increment the view count
-    resources[resourceIndex].views += 1;
-
-    // In a real app, we would save this to the database
-    // Here we just return the updated count
+    resourceStore[resourceIndex].views =
+      (resourceStore[resourceIndex].views || 0) + 1;
 
     res.json({
       success: true,
-      views: resources[resourceIndex].views,
+      views: resourceStore[resourceIndex].views,
       message: `View count incremented for resource ID: ${resourceId}`,
     });
   } catch (error) {

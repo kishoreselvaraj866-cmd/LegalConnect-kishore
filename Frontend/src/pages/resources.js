@@ -42,7 +42,7 @@ export function renderResourcesPage() {
         </div>
         <div class="filter-section">
           <span class="filter-label">Type:</span>
-          <div class="filter-options">
+          <div class="filter-options" id="type-filters">
             <button class="filter-btn active" data-filter="all">All</button>
             <button class="filter-btn" data-filter="Guide">Guides</button>
             <button class="filter-btn" data-filter="Template">Templates</button>
@@ -66,12 +66,19 @@ export function renderResourcesPage() {
   // Load categories
   loadCategories();
 
+  // Type filter: when user clicks a type, apply filter and reload
+  document.querySelectorAll("#type-filters .filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#type-filters .filter-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const type = btn.dataset.filter;
+      filterResources(type === "all" ? {} : { type });
+    });
+  });
+
   // Set up search functionality
   document.getElementById("search-btn").addEventListener("click", () => {
-    const searchTerm = document.getElementById("resource-search").value.trim();
-    if (searchTerm) {
-      filterResources({ search: searchTerm });
-    }
+    filterResources();
   });
 
   // Enter key in search box
@@ -222,27 +229,45 @@ async function loadCategories() {
   }
 }
 
-function filterResources(filters) {
+function getActiveFilters() {
+  const filters = {};
+  const activeCategory = document.querySelector("#category-filters .filter-btn.active");
+  const activeType = document.querySelector("#type-filters .filter-btn.active");
+  const searchInput = document.getElementById("resource-search");
+  if (activeCategory && activeCategory.dataset.filter !== "all") {
+    filters.category = activeCategory.dataset.filter;
+  }
+  if (activeType && activeType.dataset.filter !== "all") {
+    filters.type = activeType.dataset.filter;
+  }
+  if (searchInput && searchInput.value.trim()) {
+    filters.search = searchInput.value.trim();
+  }
+  return filters;
+}
+
+function filterResources(overrides = {}) {
+  const filters = { ...getActiveFilters(), ...overrides };
   loadResources(filters);
 }
 
 function renderResourceCard(resource) {
   const hasFile = resource.file ? true : false;
+  const views = resource.views ?? 0;
+  const downloads = resource.downloads ?? 0;
 
   return `
     <div class="resource-card">
-      <div class="resource-type ${resource.type.toLowerCase()}">${
-    resource.type
+      <div class="resource-type ${(resource.type || "").toLowerCase()}">${
+    resource.type || "Guide"
   }</div>
       <h3 class="resource-title">${resource.title}</h3>
       <p class="resource-category">${resource.category}</p>
       <p class="resource-description">${resource.description}</p>
       <div class="resource-meta">
-        ${
-          resource.duration
-            ? `<span><i class="fas fa-clock"></i> ${resource.duration}</span>`
-            : ""
-        }
+        <span><i class="fas fa-eye"></i> ${views}</span>
+        <span><i class="fas fa-download"></i> ${downloads}</span>
+        ${resource.duration ? `<span><i class="fas fa-clock"></i> ${resource.duration}</span>` : ""}
       </div>
       <div class="resource-actions">
         ${
