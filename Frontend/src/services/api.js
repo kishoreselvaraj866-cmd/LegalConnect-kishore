@@ -1,10 +1,17 @@
 import axios from "axios";
 import { getCurrentLanguage } from "../utils/translations.js";
 
+// Backend base URL must end with /api so routes like /users/login become /api/users/login
+function normalizeApiBaseUrl(url) {
+  if (!url) return url;
+  const base = url.replace(/\/+$/, ""); // strip trailing slashes
+  return base.endsWith("/api") ? base : `${base}/api`;
+}
+
 const API_URL =
-  import.meta.env.VITE_APP_Backend_BaseUrl ||
+  normalizeApiBaseUrl(import.meta.env.VITE_APP_Backend_BaseUrl) ||
   (import.meta.env.PROD
-    ? "https://legalconnect-api.vercel.app/api"
+    ? "https://legal-connect-main-backend.vercel.app/api"
     : "http://localhost:5000/api");
 
 // Create axios instance

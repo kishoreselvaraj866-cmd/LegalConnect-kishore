@@ -18,6 +18,6 @@
     }
   ],
   "env": {
-    "VITE_APP_Backend_BaseUrl": "https://legalconnect-api.vercel.app/api"
+    "VITE_APP_Backend_BaseUrl": "https://legal-connect-main-backend.vercel.app/api"
   }
 }
