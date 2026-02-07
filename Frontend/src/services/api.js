@@ -164,7 +164,7 @@ export const lawyerService = {
 
       const queryString =
         queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
-      return await axios.get(`${API_URL}/lawyers${queryString}`);
+      return await api.get(`/lawyers${queryString}`);
     } catch (error) {
       console.error("Error fetching lawyers:", error);
       throw error;

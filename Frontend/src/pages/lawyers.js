@@ -311,9 +311,9 @@ async function loadLawyers(filters = {}) {
 
     // Get lawyers from API
     const response = await lawyerService.getLawyers(filters);
-    const lawyers = response.data.data;
+    const lawyers = response?.data?.data ?? response?.data ?? [];
 
-    if (!lawyers || lawyers.length === 0) {
+    if (!Array.isArray(lawyers) || lawyers.length === 0) {
       resultsContainer.innerHTML =
         '<div class="no-results">No lawyers found matching your criteria.</div>';
       return;
